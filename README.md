@@ -1,31 +1,40 @@
 # Python OpenCV example on Ubuntu Frame
 
+This example snap packages a Python script that uses OpenCV to draw a GUI,
+along with dependencies to make it work under Ubuntu Frame.
+
+It is based on the [core22 glx gears](https://github.com/canonical/iot-example-graphical-snap/tree/24/x11-glxgears) example from Ubuntu Frame.  
+
+Build the snap:
+
 ```
 snapcraft -v debug
+```
+
+Install the snap:
+
+```
 sudo snap install --dangerous ./python-ui-frame_0.0.1_amd64.snap
+```
+
+Connect the wayland plug to allow drawing to the screen:
+
+```
 sudo snap connect python-ui-frame:wayland
 ```
 
-This works:
-```
-frame-it python-ui-frame.iot-example-graphical-snap
-```
+Show the Python OpenCV QT5 GUI:
 
-This fails:
 ```
 frame-it python-ui-frame
 ```
 
-Error:
-```
-[2024-07-18 15:53:01.974116] <information> mirserver: Sending display configuration to session :
-qt.qpa.xcb: could not connect to display 
-qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "/snap/python-ui-frame/x10/lib/python3.10/site-packages/cv2/qt/plugins" even though it was found.
-This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+![python](media/frame-python-gui.png)
 
-Available platform plugins are: xcb.
+Show GLX Gears:
 
-/snap/frame-it/18/frame-it: line 35: 2453408 Aborted                 (core dumped) WAYLAND_DISPLAY="${wayland_display}" SDL_VIDEODRIVER=wayland QT_QPA_PLATFORM=wayland GDK_BACKEND=wayland $@
-[2024-07-18 15:53:03.112214] < - debug - > mirserver: Handling Terminated from pid=2453307
-[2024-07-18 15:53:03.112398] < -warning- > mirserver: wl_surface@12 destroyed before associated role
 ```
+frame-it python-ui-frame.iot-example-graphical-snap
+```
+
+![python](media/frame-gears.png)
