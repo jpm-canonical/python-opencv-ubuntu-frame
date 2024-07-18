@@ -2,6 +2,7 @@ name: python-ui-frame
 version: "0.0.1"
 summary: A simple Python UI to test Ubuntu Frame
 description: Show an OpenCV QT GUI
+license: MIT
 
 confinement: strict
 grade: stable
@@ -46,10 +47,10 @@ plugs:
 environment:
   # Other, generally useful environment settings...
   # XDG config
-  XDG_CACHE_HOME:  $SNAP_USER_COMMON/.cache
+  XDG_CACHE_HOME: $SNAP_USER_COMMON/.cache
   XDG_CONFIG_HOME: $SNAP_USER_DATA/.config
   XDG_CONFIG_DIRS: $SNAP/etc/xdg
-  XDG_DATA_DIRS:   $SNAP/usr/local/share:$SNAP/usr/share
+  XDG_DATA_DIRS: $SNAP/usr/local/share:$SNAP/usr/share
   # XKB config
   XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
 
