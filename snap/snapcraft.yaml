@@ -1,0 +1,116 @@
+name: python-ui-frame
+version: "0.0.1"
+summary: A simple Python UI to test Ubuntu Frame
+description: Show an OpenCV QT GUI
+
+confinement: strict
+grade: devel
+base: core22
+
+# This is one of four snippets that relate to providing the userspace graphics needed by your application.
+# You can treat this as "magic" so long as you don't need to make changes.
+# On the Mir website there's a lot more detail on [the graphics-core22 Snap interface](https://mir-server.io/docs/the-graphics-core22-snap-interface) and it's use.
+plugs:
+  graphics-core22:
+    interface: content
+    target: $SNAP/graphics
+    default-provider: mesa-core22
+
+environment:
+  # Other, generally useful environment settings...
+  # XDG config
+  XDG_CACHE_HOME: $SNAP_USER_COMMON/.cache
+  XDG_CONFIG_HOME: $SNAP_USER_DATA/.config
+  XDG_CONFIG_DIRS: $SNAP/etc/xdg
+  XDG_DATA_DIRS: $SNAP/usr/local/share:$SNAP/usr/share
+  # XKB config
+  XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
+
+# The `layout` ensures that files can be found by applications where they are expected by the toolkit or application.
+layout:
+  /usr/share/libdrm:
+    bind: $SNAP/graphics/libdrm
+  /usr/share/drirc.d:
+    symlink: $SNAP/graphics/drirc.d
+  # GLMark2
+  /usr/share/glmark2:
+    bind: $SNAP/usr/share/glmark2
+
+parts:
+  glmark2:
+    plugin: nil
+    stage-packages:
+      - fonts-freefont-ttf
+      - glmark2-data
+      - glmark2-wayland
+
+
+  # Some utility scripts for setting up the Wayland environment
+  setup:
+    plugin: dump
+    source: wayland-launch
+    override-build: |
+      # The plugs needed to run Wayland. (wayland-launch checks them, setup.sh connects them)
+      # You may add further plugs here if you want these options
+      PLUGS="opengl wayland graphics-core22"
+      sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
+      sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
+      craftctl default
+    stage-packages:
+      - inotify-tools
+
+  graphics-core22:
+    after:
+      - glmark2
+      - setup
+    source: https://github.com/MirServer/graphics-core22.git
+    plugin: dump
+    override-prime: |
+      craftctl default
+      ${CRAFT_PART_SRC}/bin/graphics-core22-cleanup mesa-core22 nvidia-core22
+      cd "$CRAFT_PRIME/usr/share/"
+      rm -rf bug drirc.d glvnd libdrm lintian man
+      rm -rf applications apport bash-completion dbus-1 doc-base doc gtk-doc\
+             help pkgconfig libthai metainfo themes thumbnailers xml
+    prime:
+      - bin/graphics-core22-wrapper
+
+
+  python-source:
+    plugin: python
+    source: .
+    python-packages:
+      - opencv-python
+    stage-packages:
+      - python3
+      - libgl1
+      - libice6
+      - libsm6
+#      - qtwayland5
+    override-build: |
+      craftctl default
+      cp show-ui.py $CRAFT_PART_INSTALL/
+      cp grace_hopper.bmp $CRAFT_PART_INSTALL/
+
+apps:
+  iot-example-graphical-snap:
+    command-chain:
+      - bin/graphics-core22-wrapper
+      - bin/wayland-launch
+    command: usr/bin/glmark2-wayland --annotate --fullscreen --run-forever
+    plugs:
+      - opengl
+      - wayland
+
+  python-ui-frame:
+    environment:
+      XDG_SESSION_TYPE: x11
+      QT_QPA_PLATFORM: xcb
+    plugs:
+      - x11
+      - opengl
+      - wayland
+    command-chain:
+      - bin/graphics-core22-wrapper
+      - bin/wayland-launch
+    command: bin/python3 $SNAP/show-ui.py
