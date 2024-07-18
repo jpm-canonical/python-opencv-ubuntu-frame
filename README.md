@@ -3,7 +3,7 @@
 This example snap packages a Python script that uses OpenCV to draw a GUI,
 along with dependencies to make it work under Ubuntu Frame.
 
-It is based on the [core22 glx gears](https://github.com/canonical/iot-example-graphical-snap/tree/24/x11-glxgears) example from Ubuntu Frame.  
+It is based on the [core22 glx gears](https://github.com/canonical/iot-example-graphical-snap/tree/22/x11-glxgears) example from Ubuntu Frame.  
 
 Build the snap:
 
