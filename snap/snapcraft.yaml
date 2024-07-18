@@ -4,8 +4,35 @@ summary: A simple Python UI to test Ubuntu Frame
 description: Show an OpenCV QT GUI
 
 confinement: strict
-grade: devel
+grade: stable
 base: core22
+
+apps:
+  iot-example-graphical-snap:
+    command-chain:
+      - bin/graphics-core22-wrapper
+      - bin/wayland-launch
+      - bin/setup-mir
+      - bin/setup-x11
+      - usr/local/bin/x11_kiosk_launch
+    command: usr/bin/glxgears
+    plugs:
+      - opengl
+      - wayland
+      - network-bind   # For Mir (to serve X11)
+
+  python-ui-frame:
+    command-chain:
+      - bin/graphics-core22-wrapper
+      - bin/wayland-launch
+      - bin/setup-mir
+      - bin/setup-x11
+      - usr/local/bin/x11_kiosk_launch
+    command: bin/python3 $SNAP/show-ui.py
+    plugs:
+      - opengl
+      - wayland
+      - network-bind   # For Mir (to serve X11)
 
 # This is one of four snippets that relate to providing the userspace graphics needed by your application.
 # You can treat this as "magic" so long as you don't need to make changes.
@@ -19,10 +46,10 @@ plugs:
 environment:
   # Other, generally useful environment settings...
   # XDG config
-  XDG_CACHE_HOME: $SNAP_USER_COMMON/.cache
+  XDG_CACHE_HOME:  $SNAP_USER_COMMON/.cache
   XDG_CONFIG_HOME: $SNAP_USER_DATA/.config
   XDG_CONFIG_DIRS: $SNAP/etc/xdg
-  XDG_DATA_DIRS: $SNAP/usr/local/share:$SNAP/usr/share
+  XDG_DATA_DIRS:   $SNAP/usr/local/share:$SNAP/usr/share
   # XKB config
   XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
 
@@ -32,18 +59,42 @@ layout:
     bind: $SNAP/graphics/libdrm
   /usr/share/drirc.d:
     symlink: $SNAP/graphics/drirc.d
-  # GLMark2
-  /usr/share/glmark2:
-    bind: $SNAP/usr/share/glmark2
+  # X11
+  /usr/bin/xkbcomp:
+    symlink: $SNAP/usr/bin/xkbcomp
+  /usr/share/X11:
+    bind: $SNAP/usr/share/X11
 
 parts:
-  glmark2:
+  glxgears:
     plugin: nil
     stage-packages:
-      - fonts-freefont-ttf
-      - glmark2-data
-      - glmark2-wayland
+      - mesa-utils
 
+  # A simple kiosk for X11 on Wayland
+  mir-kiosk-x11:
+    plugin: cmake
+    source: https://github.com/MirServer/mir_kiosk_x11.git
+    build-packages:
+      - pkg-config
+      - libmiral-dev
+      - make
+      - g++
+    stage-packages:
+      - libmiral4
+      - mir-platform-graphics-wayland
+      - dmz-cursor-theme
+      - fonts-freefont-ttf
+      - xwayland
+      - libbz2-1.0
+
+  # Some utility scripts for setting up the X11/Mir
+  env-setup:
+    plugin: dump
+    source: env-setup
+    override-build: |
+      sed --in-place s/\$\{CRAFT_ARCH_TRIPLET}/${CRAFT_ARCH_TRIPLET}/g $CRAFT_PART_BUILD/bin/*
+      craftctl default
 
   # Some utility scripts for setting up the Wayland environment
   setup:
@@ -52,7 +103,7 @@ parts:
     override-build: |
       # The plugs needed to run Wayland. (wayland-launch checks them, setup.sh connects them)
       # You may add further plugs here if you want these options
-      PLUGS="opengl wayland graphics-core22"
+      PLUGS="opengl wayland graphics-core22 network-bind"
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/wayland-launch
       sed --in-place "s/%PLUGS%/$PLUGS/g" $CRAFT_PART_BUILD/bin/setup.sh
       craftctl default
@@ -61,7 +112,9 @@ parts:
 
   graphics-core22:
     after:
-      - glmark2
+      - glxgears
+      - mir-kiosk-x11
+      - env-setup
       - setup
     source: https://github.com/MirServer/graphics-core22.git
     plugin: dump
@@ -75,7 +128,6 @@ parts:
     prime:
       - bin/graphics-core22-wrapper
 
-
   python-source:
     plugin: python
     source: .
@@ -86,31 +138,13 @@ parts:
       - libgl1
       - libice6
       - libsm6
-#      - qtwayland5
+    #      - qtwayland5
     override-build: |
       craftctl default
       cp show-ui.py $CRAFT_PART_INSTALL/
       cp grace_hopper.bmp $CRAFT_PART_INSTALL/
 
-apps:
-  iot-example-graphical-snap:
-    command-chain:
-      - bin/graphics-core22-wrapper
-      - bin/wayland-launch
-    command: usr/bin/glmark2-wayland --annotate --fullscreen --run-forever
-    plugs:
-      - opengl
-      - wayland
-
-  python-ui-frame:
-    environment:
-      XDG_SESSION_TYPE: x11
-      QT_QPA_PLATFORM: xcb
-    plugs:
-      - x11
-      - opengl
-      - wayland
-    command-chain:
-      - bin/graphics-core22-wrapper
-      - bin/wayland-launch
-    command: bin/python3 $SNAP/show-ui.py
+architectures:
+  - build-on: amd64
+  - build-on: armhf
+  - build-on: arm64
