@@ -9,19 +9,6 @@ grade: stable
 base: core24
 
 apps:
-  iot-example-graphical-snap:
-    command-chain:
-      - bin/gpu-2404-wrapper
-      - bin/wayland-launch
-      - bin/setup-mir
-      - bin/setup-x11
-      - usr/bin/mir-x11-kiosk-launch
-    command: usr/bin/glxgears
-    plugs:
-      - opengl
-      - wayland
-      - network-bind   # For Mir (to serve X11)
-
   python-ui-frame:
     command-chain:
       - bin/gpu-2404-wrapper
@@ -33,7 +20,20 @@ apps:
     plugs:
       - opengl
       - wayland
-      - network-bind   # For Mir (to serve X11)
+      - network-bind # For Mir (to serve X11)
+
+  glxgears:
+    command-chain:
+      - bin/gpu-2404-wrapper
+      - bin/wayland-launch
+      - bin/setup-mir
+      - bin/setup-x11
+      - usr/bin/mir-x11-kiosk-launch
+    command: usr/bin/glxgears
+    plugs:
+      - opengl
+      - wayland
+      - network-bind
 
 plugs:
   gpu-2404:
@@ -69,6 +69,23 @@ layout:
     bind: $SNAP/usr/share/X11
 
 parts:
+  # Add our Python application
+  python-source:
+    plugin: python
+    source: .
+    python-packages:
+      - opencv-python
+    stage-packages:
+      - python3
+      - libgl1
+      - libice6
+      - libsm6
+    override-build: |
+      craftctl default
+      cp show-ui.py $CRAFT_PART_INSTALL/
+      cp grace_hopper.bmp $CRAFT_PART_INSTALL/
+
+  # Add an example X11 application
   glxgears:
     plugin: nil
     stage-packages:
@@ -106,6 +123,9 @@ parts:
 
   gpu-2404:
     after:
+      # The graphics-core22 or gpu-2404 part needs to run after adding your own code,
+      # as this part does some cleanup. Without it we saw library version mismatches.
+      - python-source
       - glxgears
       - mir-x11-kiosk
       - env-setup
@@ -117,22 +137,6 @@ parts:
       ${CRAFT_PART_SRC}/bin/gpu-2404-cleanup mesa-2404
     prime:
       - bin/gpu-2404-wrapper
-
-  python-source:
-    plugin: python
-    source: .
-    python-packages:
-      - opencv-python
-    stage-packages:
-      - python3
-      - libgl1
-      - libice6
-      - libsm6
-    #      - qtwayland5
-    override-build: |
-      craftctl default
-      cp show-ui.py $CRAFT_PART_INSTALL/
-      cp grace_hopper.bmp $CRAFT_PART_INSTALL/
 
 platforms:
   amd64:
